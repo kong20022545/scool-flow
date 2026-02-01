@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SchoolFlow - Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+        .hidden { display: none; }
+        .active-tab-mobile { color: #4f46e5; }
+        .active-tab-mobile div { background-color: #eef2ff; }
+        .glass-nav { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); }
+        input:focus, select:focus, textarea:focus { outline: none; ring: 2px; ring-color: #6366f1; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-white">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+    </div>
+
+    <!-- Auth View (Login/Register) -->
+    <div id="auth-view" class="hidden min-h-screen flex items-center justify-center bg-indigo-50 p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+            <div class="flex justify-center mb-6">
+                <div class="bg-indigo-600 p-3 rounded-xl">
+                    <i data-lucide="book-open" class="text-white w-8 h-8"></i>
+                </div>
+            </div>
+            <h2 id="auth-title" class="text-2xl font-bold text-center text-gray-800 mb-2">ยินดีต้อนรับเข้าสู่ระบบ</h2>
+            <p class="text-center text-gray-500 mb-8">School Management System</p>
+            
+            <form id="auth-form" class="space-y-4">
+                <div id="register-fields" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล</label>
+                        <input name="name" id="reg-name" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="ชื่อภาษาไทย">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">บทบาท (Role)</label>
+                        <select name="role" id="reg-role" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                            <option value="student">นักเรียน (Student)</option>
+                            <option value="teacher">ครู (Teacher)</option>
+                            <option value="admin">ผู้ดูแลระบบ (Admin)</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">อีเมล / รหัสพนักงาน</label>
+                    <input type="email" id="auth-email" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="demo@school.com" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label>
+                    <input type="password" id="auth-password" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="auth-submit-btn" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">
+                    เข้าสู่ระบบ
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <button id="toggle-auth" class="text-indigo-600 text-sm font-medium">ยังไม่มีบัญชี? สมัครที่นี่</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App View -->
+    <div id="app-view" class="hidden min-h-screen">
+        <!-- Top Nav (Desktop) -->
+        <nav class="hidden lg:flex sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200 z-40 px-8 py-4 justify-between items-center">
+            <div class="flex items-center gap-2 text-indigo-600">
+                <i data-lucide="book-open" class="fill-current"></i>
+                <span class="text-xl font-black uppercase tracking-tighter">SchoolFlow</span>
+            </div>
+            <div class="flex gap-8 font-medium text-slate-500" id="desktop-tabs">
+                <button data-tab="dashboard" class="hover:text-indigo-600 transition">หน้าหลัก</button>
+                <button data-tab="classes" class="hover:text-indigo-600 transition">คลาสเรียน</button>
+                <button data-tab="attendance" class="hover:text-indigo-600 transition">เช็คชื่อ</button>
+                <button data-tab="profile" class="hover:text-indigo-600 transition">โปรไฟล์</button>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <main class="max-w-7xl mx-auto p-4 lg:pt-8 pb-24 lg:pb-8">
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <header class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">สวัสดี, <span class="user-name-display">...</span></h1>
+                        <p class="text-gray-500 text-sm">วันนี้มีคลาสเรียนรอคุณอยู่</p>
+                    </div>
+                    <div class="bg-indigo-100 p-2 rounded-full text-indigo-600 relative">
+                        <i data-lucide="bell"></i>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                    </div>
+                </header>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="stats-grid">
+                    <!-- Stats loaded dynamically -->
+                </div>
+
+                <div class="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h3 class="text-lg font-semibold mb-2">เช็คชื่อเข้า-ออกเรียน</h3>
+                        <p class="text-indigo-100 text-sm mb-4">บันทึกเวลาปัจจุบันเพื่อเก็บประวัติการเข้าเรียน</p>
+                        <div class="flex gap-3">
+                            <button onclick="handleClockAction('in')" class="flex-1 bg-white/20 backdrop-blur-md py-2 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-white/30 transition">
+                                <i data-lucide="check-circle" size="18"></i> Clock In
+                            </button>
+                            <button onclick="handleClockAction('out')" class="flex-1 bg-white/10 backdrop-blur-md py-2 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-white/20 transition border border-white/20">
+                                <i data-lucide="log-out" size="18"></i> Clock Out
+                            </button>
+                        </div>
+                    </div>
+                    <div class="absolute top-[-20px] right-[-20px] opacity-10">
+                        <i data-lucide="clock" class="w-[120px] h-[120px]"></i>
+                    </div>
+                </div>
+
+                <section>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-800">ตารางเรียนวันนี้</h3>
+                        <button onclick="switchTab('classes')" class="text-indigo-600 text-sm font-medium">ดูทั้งหมด</button>
+                    </div>
+                    <div id="today-classes-list" class="space-y-3">
+                        <!-- Classes list -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Classes Tab -->
+            <div id="tab-classes" class="tab-content hidden space-y-4">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-800">จัดการคลาสเรียน</h2>
+                    <button id="add-class-btn" class="hidden bg-indigo-600 text-white p-2 rounded-full shadow-lg hover:rotate-90 transition-transform">
+                        <i data-lucide="plus"></i>
+                    </button>
+                </div>
+                <div id="classes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Cards -->
+                </div>
+            </div>
+
+            <!-- Attendance Tab -->
+            <div id="tab-attendance" class="tab-content hidden space-y-4">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">ประวัติการเข้าเรียน</h2>
+                <div id="attendance-list" class="space-y-3 text-center py-12 text-gray-400">
+                    ยังไม่พบประวัติการเช็คชื่อ
+                </div>
+            </div>
+
+            <!-- Profile Tab -->
+            <div id="tab-profile" class="tab-content hidden">
+                <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 text-center flex flex-col items-center">
+                    <div class="w-24 h-24 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mb-4 border-4 border-white shadow-md">
+                        <i data-lucide="user" class="w-12 h-12"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800 user-name-display">...</h2>
+                    <span id="user-role-badge" class="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold uppercase mt-1">...</span>
+                    
+                    <div class="w-full grid grid-cols-1 gap-3 mt-8 text-left">
+                        <div class="p-4 bg-slate-50 rounded-2xl flex items-center gap-3">
+                            <i data-lucide="shield-check" class="text-indigo-500"></i>
+                            <div class="overflow-hidden">
+                                <p class="text-[10px] text-gray-400 uppercase font-bold">User ID</p>
+                                <p id="user-id-display" class="text-sm font-mono text-gray-600 break-all">...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="signout-btn" class="mt-8 w-full py-4 bg-red-50 text-red-600 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition">
+                        <i data-lucide="log-out"></i> ออกจากระบบ
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Nav (Mobile) -->
+        <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around p-3 z-40 shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.05)]">
+            <button onclick="switchTab('dashboard')" data-mobile-tab="dashboard" class="flex flex-col items-center gap-1 min-w-[60px] active-tab-mobile">
+                <div class="p-1 rounded-xl"><i data-lucide="layout-dashboard" size="22"></i></div>
+                <span class="text-[10px] font-bold uppercase tracking-wide">หลัก</span>
+            </button>
+            <button onclick="switchTab('classes')" data-mobile-tab="classes" class="flex flex-col items-center gap-1 min-w-[60px] text-slate-400">
+                <div class="p-1 rounded-xl"><i data-lucide="book-open" size="22"></i></div>
+                <span class="text-[10px] font-bold uppercase tracking-wide">คลาส</span>
+            </button>
+            <button onclick="switchTab('attendance')" data-mobile-tab="attendance" class="flex flex-col items-center gap-1 min-w-[60px] text-slate-400">
+                <div class="p-1 rounded-xl"><i data-lucide="clock" size="22"></i></div>
+                <span class="text-[10px] font-bold uppercase tracking-wide">เช็คชื่อ</span>
+            </button>
+            <button onclick="switchTab('profile')" data-mobile-tab="profile" class="flex flex-col items-center gap-1 min-w-[60px] text-slate-400">
+                <div class="p-1 rounded-xl"><i data-lucide="user" size="22"></i></div>
+                <span class="text-[10px] font-bold uppercase tracking-wide">ฉัน</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Modal: Add Class -->
+    <div id="class-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md p-6">
+            <h3 class="text-xl font-bold mb-4">เพิ่มคลาสเรียนใหม่</h3>
+            <form id="add-class-form" class="space-y-4">
+                <input name="title" placeholder="ชื่อวิชา" required class="w-full px-4 py-2 border rounded-xl">
+                <input name="time" placeholder="วันและเวลา (เช่น จันทร์ 09:00 - 11:00)" required class="w-full px-4 py-2 border rounded-xl">
+                <input name="capacity" type="number" placeholder="จำนวนที่รับ" required class="w-full px-4 py-2 border rounded-xl">
+                <textarea name="description" placeholder="รายละเอียดวิชา" rows="3" class="w-full px-4 py-2 border rounded-xl"></textarea>
+                <div class="flex gap-2">
+                    <button type="button" id="close-modal-btn" class="flex-1 py-3 text-gray-500 font-semibold">ยกเลิก</button>
+                    <button type="submit" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-semibold">ยืนยันการเพิ่ม</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global State
+        let currentUser = null;
+        let userData = null;
+        let viewMode = 'login';
+        let classes = [];
+        let bookings = [];
+        let attendance = [];
+
+        // App Config
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'school-mgmt-v1';
+
+        // Initialize Lucide Icons
+        const renderIcons = () => lucide.createIcons();
+
+        // View Control
+        const showLoading = (show) => {
+            document.getElementById('loading-screen').classList.toggle('hidden', !show);
+        };
+
+        const updateView = () => {
+            document.getElementById('auth-view').classList.toggle('hidden', viewMode === 'app');
+            document.getElementById('app-view').classList.toggle('hidden', viewMode !== 'app');
+            
+            if (viewMode === 'app' && userData) {
+                const names = document.querySelectorAll('.user-name-display');
+                names.forEach(el => el.textContent = userData.name);
+                document.getElementById('user-role-badge').textContent = userData.role;
+                document.getElementById('user-id-display').textContent = currentUser.uid;
+                
+                // Show Add button if teacher/admin
+                const showAdd = (userData.role === 'admin' || userData.role === 'teacher');
+                document.getElementById('add-class-btn').classList.toggle('hidden', !showAdd);
+            }
+            renderIcons();
+        };
+
+        const switchTab = (tabId) => {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            
+            // Mobile Nav UI Update
+            document.querySelectorAll('[data-mobile-tab]').forEach(btn => {
+                const isActive = btn.getAttribute('data-mobile-tab') === tabId;
+                btn.classList.toggle('active-tab-mobile', isActive);
+                btn.classList.toggle('text-slate-400', !isActive);
+            });
+            renderIcons();
+        };
+        window.switchTab = switchTab;
+
+        // Auth Listener
+        onAuthStateChanged(auth, async (user) => {
+            showLoading(true);
+            if (user) {
+                currentUser = user;
+                const userDoc = await getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'));
+                if (userDoc.exists()) {
+                    userData = userDoc.data();
+                    viewMode = 'app';
+                    setupDataListeners();
+                } else {
+                    viewMode = 'login'; // or should stay at register
+                    document.getElementById('register-fields').classList.remove('hidden');
+                    document.getElementById('auth-title').textContent = 'สร้างบัญชีผู้ใช้ใหม่';
+                    document.getElementById('auth-submit-btn').textContent = 'ลงทะเบียน';
+                }
+            } else {
+                currentUser = null;
+                userData = null;
+                viewMode = 'login';
+            }
+            updateView();
+            showLoading(false);
+        });
+
+        // Data Listeners
+        const setupDataListeners = () => {
+            if (!currentUser) return;
+
+            // Classes
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'classes'), (snap) => {
+                classes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderClasses();
+                renderStats();
+                renderDashboardClasses();
+            }, (err) => console.error(err));
+
+            // Bookings
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'bookings'), (snap) => {
+                const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                bookings = userData.role === 'student' ? all.filter(b => b.studentId === currentUser.uid) : all;
+                renderClasses(); // Re-render to update booking status buttons
+                renderStats();
+            });
+
+            // Attendance
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'attendance'), (snap) => {
+                const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                attendance = userData.role === 'student' ? all.filter(a => a.userId === currentUser.uid) : all;
+                renderAttendance();
+                renderStats();
+            });
+        };
+
+        // Render Logic
+        const renderStats = () => {
+            const stats = [
+                { label: 'คลาสทั้งหมด', val: classes.length, icon: 'book-open', color: 'bg-blue-500' },
+                { label: 'การจองของฉัน', val: bookings.length, icon: 'calendar', color: 'bg-green-500' },
+                { label: 'เวลาเข้าเรียน', val: attendance.filter(a => a.type === 'in').length, icon: 'clock', color: 'bg-orange-500' },
+                { label: 'เพื่อนร่วมชั้น', val: 24, icon: 'users', color: 'bg-purple-500' },
+            ];
+            const container = document.getElementById('stats-grid');
+            container.innerHTML = stats.map(s => `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
+                    <div class="${s.color} p-2 rounded-xl text-white mb-2">
+                        <i data-lucide="${s.icon}" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-2xl font-bold text-gray-800">${s.val}</span>
+                    <span class="text-xs text-gray-500 uppercase tracking-wider">${s.label}</span>
+                </div>
+            `).join('');
+            renderIcons();
+        };
+
+        const renderClasses = () => {
+            const container = document.getElementById('classes-grid');
+            if (classes.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400">ไม่มีคลาสเรียนในขณะนี้</div>';
+                return;
+            }
+
+            container.innerHTML = classes.map(cls => {
+                const isBooked = bookings.some(b => b.classId === cls.id);
+                const isFull = cls.joined >= cls.capacity;
+                const isTeacher = userData.role === 'teacher' || userData.role === 'admin';
+
+                let actionHtml = '';
+                if (!isTeacher) {
+                    actionHtml = `
+                        <button onclick="handleBookClass('${cls.id}')" 
+                            class="w-full py-2.5 rounded-xl font-semibold transition ${isBooked ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}"
+                            ${isBooked || isFull ? 'disabled' : ''}>
+                            ${isBooked ? 'จองแล้ว' : (isFull ? 'ที่นั่งเต็ม' : 'จองที่นั่ง')}
+                        </button>
+                    `;
+                } else {
+                    actionHtml = `
+                        <div class="flex gap-2">
+                            <button class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium">แก้ไข</button>
+                            <button onclick="handleDeleteClass('${cls.id}')" class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                                <i data-lucide="x-circle" size="20"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition">
+                        <div class="h-2 bg-indigo-500"></div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="text-lg font-bold text-gray-800">${cls.title}</h3>
+                                <span class="bg-indigo-50 text-indigo-600 text-[10px] px-2 py-1 rounded-full uppercase font-bold">${cls.teacher}</span>
+                            </div>
+                            <p class="text-gray-500 text-sm mb-4 line-clamp-2">${cls.description}</p>
+                            <div class="flex items-center gap-4 text-xs text-gray-500 mb-6">
+                                <div class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ${cls.time}</div>
+                                <div class="flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5"></i> ${cls.joined}/${cls.capacity}</div>
+                            </div>
+                            ${actionHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            renderIcons();
+        };
+
+        const renderDashboardClasses = () => {
+            const container = document.getElementById('today-classes-list');
+            container.innerHTML = classes.slice(0, 3).map(cls => `
+                <div class="bg-white p-4 rounded-2xl flex items-center gap-4 border border-slate-100 shadow-sm cursor-pointer hover:bg-slate-50 transition" onclick="switchTab('classes')">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xl">
+                        ${cls.title.charAt(0)}
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-gray-800">${cls.title}</h4>
+                        <p class="text-xs text-gray-500">${cls.time}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs px-2 py-1 bg-green-50 text-green-600 rounded-lg font-medium">เปิดรับสมัคร</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="text-slate-300 w-5 h-5"></i>
+                </div>
+            `).join('');
+            renderIcons();
+        };
+
+        const renderAttendance = () => {
+            const container = document.getElementById('attendance-list');
+            if (attendance.length === 0) {
+                container.innerHTML = 'ยังไม่พบประวัติการเช็คชื่อ';
+                container.className = "space-y-3 text-center py-12 text-gray-400";
+                return;
+            }
+            container.className = "space-y-3";
+            container.innerHTML = attendance.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(att => `
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg ${att.type === 'in' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">
+                            <i data-lucide="${att.type === 'in' ? 'check-circle' : 'log-out'}" class="w-[18px] h-[18px]"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-800 text-left">${att.userName}</p>
+                            <p class="text-xs text-gray-400 text-left">${att.type === 'in' ? 'เช็คชื่อเข้า' : 'เช็คชื่อออก'}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-gray-700">${new Date(att.timestamp).toLocaleTimeString('th-TH')}</p>
+                        <p class="text-[10px] text-gray-400">${new Date(att.timestamp).toLocaleDateString('th-TH')}</p>
+                    </div>
+                </div>
+            `).join('');
+            renderIcons();
+        };
+
+        // Event Handlers
+        document.getElementById('auth-form').onsubmit = async (e) => {
+            e.preventDefault();
+            showLoading(true);
+            const isRegister = !document.getElementById('register-fields').classList.contains('hidden');
+            
+            try {
+                // Simplified Auth for demo in sandbox environment
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                if (isRegister) {
+                    const name = document.getElementById('reg-name').value;
+                    const role = document.getElementById('reg-role').value;
+                    const user = auth.currentUser;
+                    const profile = { uid: user.uid, name, role, createdAt: new Date().toISOString() };
+                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'), profile);
+                    userData = profile;
+                    viewMode = 'app';
+                    setupDataListeners();
+                    updateView();
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Auth Failed: " + err.message);
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        document.getElementById('toggle-auth').onclick = () => {
+            const isLogin = document.getElementById('auth-title').textContent === 'ยินดีต้อนรับเข้าสู่ระบบ';
+            document.getElementById('register-fields').classList.toggle('hidden', !isLogin);
+            document.getElementById('auth-title').textContent = isLogin ? 'สร้างบัญชีผู้ใช้ใหม่' : 'ยินดีต้อนรับเข้าสู่ระบบ';
+            document.getElementById('auth-submit-btn').textContent = isLogin ? 'ลงทะเบียน' : 'เข้าสู่ระบบ';
+            document.getElementById('toggle-auth').textContent = isLogin ? 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัครที่นี่';
+        };
+
+        document.getElementById('signout-btn').onclick = () => signOut(auth);
+
+        document.getElementById('add-class-btn').onclick = () => document.getElementById('class-modal').classList.remove('hidden');
+        document.getElementById('close-modal-btn').onclick = () => document.getElementById('class-modal').classList.add('hidden');
+
+        document.getElementById('add-class-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const newClass = {
+                title: formData.get('title'),
+                teacher: userData.name,
+                teacherId: currentUser.uid,
+                time: formData.get('time'),
+                capacity: parseInt(formData.get('capacity')),
+                joined: 0,
+                description: formData.get('description')
+            };
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'classes'), newClass);
+            document.getElementById('class-modal').classList.add('hidden');
+            e.target.reset();
+        };
+
+        window.handleBookClass = async (classId) => {
+            const cls = classes.find(c => c.id === classId);
+            if (!cls) return;
+            
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'bookings'), {
+                classId: cls.id,
+                className: cls.title,
+                studentId: currentUser.uid,
+                studentName: userData.name,
+                time: cls.time,
+                status: 'pending'
+            });
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'classes', cls.id), {
+                joined: cls.joined + 1
+            });
+        };
+
+        window.handleDeleteClass = async (classId) => {
+            if (confirm('คุณแน่ใจว่าต้องการลบคลาสนี้?')) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'classes', classId));
+            }
+        };
+
+        window.handleClockAction = async (type) => {
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'attendance'), {
+                userId: currentUser.uid,
+                userName: userData.name,
+                type,
+                timestamp: new Date().toISOString()
+            });
+            alert(type === 'in' ? 'เช็คชื่อเข้าเรียนสำเร็จ' : 'เช็คชื่อออกสำเร็จ');
+        };
+
+        // Desktop Tabs
+        document.querySelectorAll('#desktop-tabs button').forEach(btn => {
+            btn.onclick = () => {
+                const tab = btn.getAttribute('data-tab');
+                switchTab(tab);
+                document.querySelectorAll('#desktop-tabs button').forEach(b => b.classList.remove('text-indigo-600'));
+                btn.classList.add('text-indigo-600');
+            };
+        });
+
+    </script>
+</body>
+</html>
